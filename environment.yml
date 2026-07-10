@@ -1,0 +1,7 @@
+name: vllm-model-server
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pyyaml

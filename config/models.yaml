@@ -1,0 +1,92 @@
+# Model registry: HF id <-> local path <-> recommended vLLM params
+# Use with scripts/start.sh by setting MODEL_KEY or copying values into .env
+
+models_root: /mnt/cache/tonghao2/data/models
+
+models:
+  qwen2.5-coder-3b:
+    hf_id: Qwen/Qwen2.5-Coder-3B-Instruct
+    local_path: /mnt/cache/tonghao2/data/models/Qwen/Qwen2.5-Coder-3B-Instruct
+    served_model_name: qwen2.5-coder-3b
+    max_model_len: 32768
+    gpu_memory_utilization: 0.90
+    notes: Lightweight, good for smoke tests
+
+  qwen2.5-coder-7b:
+    hf_id: Qwen/Qwen2.5-Coder-7B-Instruct
+    local_path: /mnt/cache/tonghao2/data/models/Qwen/Qwen2.5-Coder-7B-Instruct
+    served_model_name: qwen2.5-coder-7b
+    max_model_len: 32768
+    gpu_memory_utilization: 0.90
+    notes: Fast coding model, ~16GB VRAM
+
+  qwen2.5-coder-14b:
+    hf_id: Qwen/Qwen2.5-Coder-14B-Instruct
+    local_path: /mnt/cache/tonghao2/data/models/Qwen/Qwen2.5-Coder-14B-Instruct
+    served_model_name: qwen2.5-coder-14b
+    max_model_len: 32768
+    gpu_memory_utilization: 0.90
+    notes: Default recommendation for A800 80GB
+
+  qwen2.5-coder-32b:
+    hf_id: Qwen/Qwen2.5-Coder-32B-Instruct
+    local_path: /mnt/cache/tonghao2/data/models/Qwen/Qwen2.5-Coder-32B-Instruct
+    served_model_name: qwen2.5-coder-32b
+    max_model_len: 32768
+    gpu_memory_utilization: 0.92
+    notes: Strong coding, ~65GB VRAM on A800
+
+  qwen3-coder-30b-a3b:
+    hf_id: Qwen/Qwen3-Coder-30B-A3B-Instruct
+    local_path: /mnt/cache/tonghao2/data/models/Qwen/Qwen3-Coder-30B-A3B-Instruct
+    served_model_name: qwen3-coder-30b-a3b
+    max_model_len: 32768
+    gpu_memory_utilization: 0.90
+    notes: MoE coding model, good quality/speed tradeoff
+
+  qwen3.5-122b-a10b:
+    hf_id: Qwen/Qwen3.5-122B-A10B
+    local_path: /mnt/cache/tonghao2/data/models/Qwen/Qwen3.5-122B-A10B
+    served_model_name: qwen3.5-122b-a10b
+    max_model_len: 262144
+    gpu_memory_utilization: 0.90
+    tensor_parallel_size: 8
+    vllm_extra_args: "--reasoning-parser qwen3 --max-num-seqs 256"
+    notes: BF16; official 8-GPU config (4x H200 / 8x H100)
+
+  qwen3.5-122b-a10b-fp8:
+    hf_id: Qwen/Qwen3.5-122B-A10B-FP8
+    local_path: /mnt/cache/tonghao2/data/models/Qwen/Qwen3.5-122B-A10B-FP8
+    served_model_name: qwen3.5-122b-a10b-fp8
+    max_model_len: 262144
+    gpu_memory_utilization: 0.90
+    tensor_parallel_size: 8
+    vllm_extra_args: "--reasoning-parser qwen3 --max-num-seqs 256"
+    notes: FP8 official quant; recommended for 8x A800/H100 80GB
+
+# Recommended models to download (not yet local)
+recommended_downloads:
+  - hf_id: Qwen/Qwen3.5-32B-Instruct
+    use_case: General chat, reasoning, multilingual
+    license: Apache 2.0
+    vram_estimate: ~65GB
+
+  - hf_id: deepseek-ai/DeepSeek-V3
+    use_case: Coding and reasoning
+    license: MIT
+    vram_estimate: Multi-GPU or quantization
+
+  - hf_id: meta-llama/Llama-4-Scout-17B-16E-Instruct
+    use_case: Ultra long context (10M tokens)
+    license: Meta custom
+    vram_estimate: ~35GB active
+
+  - hf_id: THUDM/glm-4-9b-chat
+    use_case: Chinese agent workflows
+    license: Model-specific
+    vram_estimate: ~20GB
+
+  - hf_id: microsoft/phi-4
+    use_case: Strong reasoning in smaller size
+    license: MIT
+    vram_estimate: ~30GB
