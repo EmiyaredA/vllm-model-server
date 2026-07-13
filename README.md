@@ -16,7 +16,10 @@
 ```bash
 cd /mnt/cache/tonghao2/slns/vllm-model-server
 
-# 一键安装（推荐）
+# 全新安装（推荐，删旧环境避免依赖冲突）
+bash scripts/shell/install.sh --recreate
+
+# 环境已存在、仅补装依赖
 bash scripts/shell/install.sh
 
 # 可选：自定义镜像
@@ -29,18 +32,11 @@ conda activate vllm-model-server
 安装脚本会：
 
 1. 配置 pip 镜像（默认清华源，`mirrors.env` 可改）
-2. 用 `environment.yml` 创建 conda 基础环境（python / pip / pyyaml）
-3. 通过 pip 安装 vllm、huggingface-hub 等（避免 `conda env create` 内置 pip 在无网环境失败）
-4. 验证 `import vllm` 与 CLI
+2. 创建 conda 环境（python 3.10）
+3. 锁定安装 **torch 2.6.0+cu124 + vllm 0.8.5**（适配驱动 535 / CUDA 12.4）
+4. 验证 GPU 可访问
 
-手动安装（仅网络畅通时）：
-
-```bash
-conda env create -f environment.yml
-conda activate vllm-model-server
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple \
-  "vllm>=0.8.0" "huggingface-hub>=0.27.0" tqdm openai
-```
+手动安装请与 `install.sh` 保持相同版本锁定，勿 `pip install vllm` 拉最新版（会与 CUDA 12.4 驱动冲突）。
 
 验证安装：
 
@@ -58,16 +54,13 @@ vllm --help
 # 1. 激活 conda 环境
 conda activate vllm-model-server
 
-# 2. 配置环境变量
-cp .env.example .env
-# 按需修改 MODEL_PATH 或 MODEL_KEY
+# 2. 编辑 scripts/shell/start.sh 顶部配置（模型、端口等，见 config/config.py）
 
 # 3. 启动服务
-chmod +x scripts/*.sh
-./scripts/start.sh
+bash scripts/shell/start.sh
 
-# 4. 健康检查（另开终端，同样先 conda activate）
-./scripts/health_check.sh
+# 4. 健康检查（另开终端；PORT 与 start.sh 一致）
+PORT=8000 ./scripts/health_check.sh
 
 # 5. 调用示例
 python examples/chat_client.py
@@ -87,16 +80,15 @@ vllm-model-server/
 ├── README.md
 ├── environment.yml          # Conda 环境定义
 ├── pyproject.toml           # 可选：uv 依赖定义
-├── .env.example
 ├── config/
-│   └── models.yaml          # 模型注册表与推荐下载列表
+│   └── config.py            # 模型注册表（根路径 + 子路径 + 服务名）
 ├── scripts/
 │   ├── shell/
 │   │   ├── install.sh           # Conda + pip 镜像安装（新容器推荐）
+│   │   ├── start.sh             # 启动 vLLM 服务（配置在脚本顶部）
 │   │   ├── download.sh          # 模型下载（改脚本内列表即可）
 │   │   └── mirrors.env.example  # 镜像配置模板
 │   ├── download.py          # Hugging Face 下载脚本
-│   ├── start.sh             # 启动 vLLM 服务
 │   └── health_check.sh      # 健康检查
 └── examples/
     └── chat_client.py       # OpenAI SDK 调用示例
@@ -104,24 +96,24 @@ vllm-model-server/
 
 ## 配置说明
 
-复制 `.env.example` 为 `.env`，常用变量：
+编辑 `scripts/shell/start.sh` 顶部配置，常用变量：
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `MODEL_PATH` | 本地模型目录 | `.../Qwen2.5-Coder-14B-Instruct` |
-| `MODEL_KEY` | 从 `config/models.yaml` 选择预设（优先级高于手动路径） | 空 |
+| `MODELS_ROOT` | 本地模型权重根目录 | `/mnt/cache/tonghao2/data/models` |
+| `MODEL_KEY` | 从 `config/config.py` 选择预设模型 | `qwen2.5-coder-32b` |
 | `PORT` | 监听端口 | `8000` |
-| `SERVED_MODEL_NAME` | 对外暴露的模型名 | `qwen2.5-coder-14b` |
-| `MAX_MODEL_LEN` | 最大上下文长度 | `32768` |
-| `GPU_MEM_UTIL` | GPU 显存利用率 | `0.90` |
+| `TENSOR_PARALLEL_SIZE` | GPU 卡数（tensor parallel） | `1` |
+| `SERVED_MODEL_NAME` | 对外暴露的模型名（由 `MODEL_KEY` 解析） | 随 `MODEL_KEY` |
+| `MAX_MODEL_LEN` | 最大上下文长度 | 见 `config/config.py` |
+| `GPU_MEM_UTIL` | GPU 显存利用率 | 见 `config/config.py` |
 | `API_KEY` | 可选鉴权密钥，留空则关闭 | 空 |
 | `HF_HOME` | Hugging Face 缓存目录 | `/mnt/cache/tonghao2/data/cache` |
 
-使用预设模型：
+切换模型示例（改 `start.sh`）：
 
 ```bash
-# .env
-MODEL_KEY=qwen3-coder-30b-a3b
+export MODEL_KEY=qwen3-coder-30b-a3b
 ```
 
 ## 下载模型
@@ -234,17 +226,15 @@ python examples/chat_client.py \
 
 ## 切换模型
 
-1. 修改 `.env` 中的 `MODEL_PATH` 或 `MODEL_KEY`
-2. 重启 `./scripts/start.sh`
+1. 修改 `scripts/shell/start.sh` 中的 `MODEL_KEY`，或在 `config/config.py` 中增删模型条目
+2. 重新执行 `bash scripts/shell/start.sh`
 
 示例：
 
 ```bash
-# 切换到 32B
-MODEL_PATH=/mnt/cache/tonghao2/data/models/Qwen/Qwen2.5-Coder-32B-Instruct
-SERVED_MODEL_NAME=qwen2.5-coder-32b
-MAX_MODEL_LEN=16384
-GPU_MEM_UTIL=0.92
+export MODEL_KEY=qwen2.5-coder-32b
+export MAX_MODEL_LEN=16384
+export GPU_MEM_UTIL=0.92
 ```
 
 ## 常见问题
@@ -276,10 +266,8 @@ CONDA_FORGE_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-for
 # 更新环境（environment.yml 变更后）
 conda env update -f environment.yml --prune
 
-# 删除并重建
-conda deactivate
-conda env remove -n vllm-model-server
-conda env create -f environment.yml
+# 删除并重建（推荐）
+bash scripts/shell/install.sh --recreate
 ```
 
 每次新开终端启动服务前，需先执行 `conda activate vllm-model-server`。
@@ -296,7 +284,7 @@ conda env create -f environment.yml
 
 ```bash
 export HF_TOKEN=hf_xxx
-# 或在 .env 中配置 HF_TOKEN
+# 或在 start.sh 中配置 HF_TOKEN
 ```
 
 ### 服务启动慢
@@ -305,7 +293,7 @@ export HF_TOKEN=hf_xxx
 
 ### API 返回 401
 
-若在 `.env` 设置了 `API_KEY`，请求需带：
+若在 `start.sh` 设置了 `API_KEY`，请求需带：
 
 ```bash
 -H "Authorization: Bearer <your-api-key>"
@@ -318,8 +306,8 @@ flowchart LR
     Client[OpenAI SDK / curl] -->|HTTP /v1/chat/completions| VLLM[vLLM OpenAI Server]
     VLLM --> Models["/mnt/cache/tonghao2/data/models"]
     Scripts[scripts/download.py] -->|snapshot_download| Models
-    Config[config/models.yaml + .env] --> VLLM
-    Start[scripts/start.sh] --> VLLM
+    Config[config/config.py + start.sh] --> VLLM
+    Start[scripts/shell/start.sh] --> VLLM
 ```
 
 vLLM 原生提供 OpenAI 兼容 API，无需额外 FastAPI 封装层。
