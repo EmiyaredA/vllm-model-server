@@ -60,8 +60,9 @@ MODELS: dict[str, ModelSpec] = {
         hf_id="Qwen/Qwen3.5-122B-A10B",
         max_model_len=262144,
         tensor_parallel_size=8,
+        # 需 vllm-qwen35（nightly）；0.8.5 不支持 qwen3 parser / qwen3_5_moe
         vllm_extra_args="--reasoning-parser qwen3 --max-num-seqs 256",
-        notes="BF16，官方 8 卡配置",
+        notes="BF16，官方 8 卡；请用 conda env vllm-qwen35（install-qwen35.sh）",
     ),
     "qwen3.5-122b-a10b-fp8": ModelSpec(
         sub_path="Qwen/Qwen3.5-122B-A10B-FP8",
@@ -70,7 +71,7 @@ MODELS: dict[str, ModelSpec] = {
         max_model_len=262144,
         tensor_parallel_size=8,
         vllm_extra_args="--reasoning-parser qwen3 --max-num-seqs 256",
-        notes="FP8 量化，8x A800/H100 80GB",
+        notes="FP8，8x A800/H100；请用 conda env vllm-qwen35（install-qwen35.sh）",
     ),
 }
 

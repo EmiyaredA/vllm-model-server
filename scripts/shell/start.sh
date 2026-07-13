@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # 启动 vLLM 服务
 #
+#   # Qwen3.5（推荐）
+#   conda activate vllm-qwen35
+#   bash scripts/shell/start.sh
+#
+#   # Qwen2.5 / 旧栈
 #   conda activate vllm-model-server
+#   # export VLLM_USE_V1=0   # 仅 vllm 0.8.x 需要
 #   bash scripts/shell/start.sh
 #
 # 模型列表见 config/config.py
@@ -12,13 +18,16 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 # ── 配置 ──────────────────────────────────────────
 MODELS_ROOT=/mnt/cache/tonghao2/data/models
-MODEL_KEY=qwen2.5-coder-32b          # config/config.py 中的 key
+# MODEL_KEY=qwen2.5-coder-32b          # config/config.py 中的 key
+MODEL_KEY=qwen3.5-122b-a10b            # Qwen3.5-122B-A10B（BF16，官方 8 卡）
 HOST=0.0.0.0
 PORT=8000
-TENSOR_PARALLEL_SIZE=1               # 单卡填 1；多卡填卡数
+# TENSOR_PARALLEL_SIZE=1               # 单卡填 1；多卡填卡数
+TENSOR_PARALLEL_SIZE=8                 # 与 config.py 中该模型默认一致；eval 后也会被覆盖为 8
 HF_HOME=/mnt/cache/tonghao2/data/cache
-CUDA_VISIBLE_DEVICES=1               # 指定 GPU（0-7），注释掉则用全部
-export VLLM_USE_V1=0                 # vllm 0.8.x 建议关闭 v1 引擎
+# CUDA_VISIBLE_DEVICES=1               # 指定 GPU（0-7），注释掉则用全部
+# 122B 需要 8 卡，不设 CUDA_VISIBLE_DEVICES 即用全部可见 GPU
+# export VLLM_USE_V1=0                 # 仅 vllm 0.8.x 建议关闭；nightly/Qwen3.5 勿设
 
 # 可选
 # API_KEY=
@@ -28,7 +37,8 @@ export VLLM_USE_V1=0                 # vllm 0.8.x 建议关闭 v1 引擎
 # VLLM_EXTRA_ARGS="--max-num-seqs 64"
 # ─────────────────────────────────────────────────
 
-export MODEL_KEY MODELS_ROOT HF_HOME VLLM_USE_V1
+export MODEL_KEY MODELS_ROOT HF_HOME
+[[ -n "${VLLM_USE_V1:-}" ]] && export VLLM_USE_V1
 [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] && export CUDA_VISIBLE_DEVICES
 eval "$(python config/config.py)"
 

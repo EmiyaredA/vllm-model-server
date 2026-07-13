@@ -11,6 +11,15 @@
 
 ## Conda 环境配置
 
+本仓库支持两套环境，**互不覆盖**：
+
+| 环境 | 脚本 | 用途 |
+|------|------|------|
+| `vllm-model-server` | `scripts/shell/install.sh` | Qwen2.5 / Qwen3-Coder，锁定 vLLM 0.8.5 + torch cu124 |
+| `vllm-qwen35` | `scripts/shell/install-qwen35.sh` | **Qwen3.5-122B**（`qwen3_5_moe`），vLLM nightly |
+
+### 旧栈（Qwen2.5 / 0.8.5）
+
 新容器内 PyPI 往往不可直连，**请使用安装脚本**（已配置国内镜像，失败会自动切换阿里云）：
 
 ```bash
@@ -46,13 +55,35 @@ python -c "import vllm; print(vllm.__version__)"
 vllm --help
 ```
 
+### Qwen3.5 环境（nightly）
+
+`Qwen3.5-122B-A10B` 需要能识别 `qwen3_5_moe` 的 vLLM / transformers，**请使用独立环境**（按 [Qwen 模型卡](https://huggingface.co/Qwen/Qwen3.5-122B-A10B) 安装 nightly）：
+
+```bash
+cd /mnt/cache/tonghao2/slns/vllm-model-server
+
+# 需要能访问 PyPI 镜像 + https://wheels.vllm.ai/nightly（可先 source 代理）
+bash scripts/shell/install-qwen35.sh --recreate
+
+conda activate vllm-qwen35
+python -c "import vllm, transformers; print(vllm.__version__, transformers.__version__)"
+bash scripts/shell/start.sh
+```
+
+说明：
+
+- 默认环境名 `vllm-qwen35`（可用 `CONDA_ENV_NAME=...` 覆盖）
+- **不会**删除或修改 `vllm-model-server`
+- nightly 无固定版本号，装完建议 `pip show vllm transformers torch` 留档
+- `start.sh` 中 `VLLM_USE_V1=0` 已注释；仅旧 0.8.x 环境需要时自行 `export VLLM_USE_V1=0`
+
 > vLLM 依赖 CUDA，请确保 `nvidia-smi` 正常。容器内若 Hugging Face 下载慢，可设 `export HF_ENDPOINT=https://hf-mirror.com`（`install.sh` 会在 `mirrors.env` 中提示）。
 
 ## 快速开始
 
 ```bash
-# 1. 激活 conda 环境
-conda activate vllm-model-server
+# 1. 激活 conda 环境（Qwen3.5 用 vllm-qwen35；旧模型用 vllm-model-server）
+conda activate vllm-qwen35
 
 # 2. 编辑 scripts/shell/start.sh 顶部配置（模型、端口等，见 config/config.py）
 
@@ -84,7 +115,8 @@ vllm-model-server/
 │   └── config.py            # 模型注册表（根路径 + 子路径 + 服务名）
 ├── scripts/
 │   ├── shell/
-│   │   ├── install.sh           # Conda + pip 镜像安装（新容器推荐）
+│   │   ├── install.sh           # Conda + pip：vllm 0.8.5（Qwen2.5）
+│   │   ├── install-qwen35.sh    # Conda + pip：vLLM nightly（Qwen3.5）
 │   │   ├── start.sh             # 启动 vLLM 服务（配置在脚本顶部）
 │   │   ├── download.sh          # 模型下载（改脚本内列表即可）
 │   │   └── mirrors.env.example  # 镜像配置模板
